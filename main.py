@@ -8,7 +8,8 @@ from auth.router import router as auth_router
 from records.router import router as records_router
 from dashboard.router import router as dashboard_router
 from users.router import router as users_router
-
+from dotenv import load_dotenv
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
