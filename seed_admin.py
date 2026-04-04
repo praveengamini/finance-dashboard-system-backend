@@ -25,7 +25,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Admin1234!")
 
 
 async def seed():
-    # 1. Create Supabase auth user
+
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
     try:
         resp = sb.auth.admin.create_user(
@@ -35,18 +35,18 @@ async def seed():
         print(f"✅ Supabase user created: {user_id}")
     except Exception as e:
         print(f"⚠️  Supabase user may already exist: {e}")
-        # Try to get existing user id via sign-in
+
         resp = sb.auth.sign_in_with_password(
             {"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
         )
         user_id = resp.user.id
         print(f"ℹ️  Using existing user: {user_id}")
 
-    # 2. Upsert profile row with role=admin
+
     engine = create_async_engine(DATABASE_URL)
     Session = async_sessionmaker(bind=engine, expire_on_commit=False)
 
-    # Import here to avoid circular import at module level
+
     from db.models import Base, Profile
 
     async with engine.begin() as conn:

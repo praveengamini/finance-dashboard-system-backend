@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Record
@@ -30,32 +30,44 @@ async def get_records(
     category: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    search: str | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict:
-    query = select(Record).where(Record.is_deleted == False)
+    base_query = select(Record).where(Record.is_deleted == False)
 
     if type:
-        query = query.where(Record.type == type)
+        base_query = base_query.where(Record.type == type)
     if category:
-        query = query.where(Record.category == category)
+        base_query = base_query.where(Record.category == category)
     if date_from:
-        query = query.where(Record.date >= date_from)
+        base_query = base_query.where(Record.date >= date_from)
     if date_to:
-        query = query.where(Record.date <= date_to)
+        base_query = base_query.where(Record.date <= date_to)
+    if search:
+        base_query = base_query.where(
+            Record.category.ilike(f"%{search}%") |
+            Record.notes.ilike(f"%{search}%")
+        )
 
-    query = query.order_by(Record.date.desc())
 
-    # Pagination
+    count_result = await db.execute(
+        select(func.count()).select_from(base_query.subquery())
+    )
+    total_records = count_result.scalar()
+    total_pages = (total_records + page_size - 1) // page_size
+
+
     offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size)
-
-    result = await db.execute(query)
+    paginated = base_query.order_by(Record.date.desc()).offset(offset).limit(page_size)
+    result = await db.execute(paginated)
     records = result.scalars().all()
 
     return {
         "page": page,
         "page_size": page_size,
+        "total_records": total_records,
+        "total_pages": total_pages,
         "results": records,
     }
 
@@ -70,6 +82,13 @@ async def get_record_by_id(db: AsyncSession, record_id: UUID) -> Record:
     return record
 
 
+async def get_deleted_records(db: AsyncSession) -> list:
+    result = await db.execute(
+        select(Record).where(Record.is_deleted == True).order_by(Record.updated_at.desc())
+    )
+    return result.scalars().all()
+
+
 async def update_record(
     db: AsyncSession, record_id: UUID, data: RecordUpdate
 ) -> Record:
@@ -77,7 +96,6 @@ async def update_record(
 
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        # unwrap enum values
         setattr(record, field, value.value if hasattr(value, "value") else value)
 
     record.updated_at = datetime.now(timezone.utc)
@@ -88,7 +106,7 @@ async def update_record(
 
 async def delete_record(db: AsyncSession, record_id: UUID) -> dict:
     record = await get_record_by_id(db, record_id)
-    record.is_deleted = True               # soft delete
+    record.is_deleted = True
     record.updated_at = datetime.now(timezone.utc)
     await db.commit()
     return {"detail": "Record deleted successfully"}

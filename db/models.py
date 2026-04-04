@@ -33,7 +33,7 @@ class Profile(Base):
     """
     __tablename__ = "profiles"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)          # Supabase user UUID
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     role: Mapped[str] = mapped_column(String, default=UserRole.viewer)
     status: Mapped[str] = mapped_column(String, default=UserStatus.active)
@@ -50,17 +50,17 @@ class Record(Base):
     __tablename__ = "records"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[str] = mapped_column(String, nullable=False)        # FK → profiles.id
+    user_id: Mapped[str] = mapped_column(String, nullable=False)
 
     amount: Mapped[float] = mapped_column(Float, nullable=False)
-    type: Mapped[str] = mapped_column(String, nullable=False)           # income | expense
+    type: Mapped[str] = mapped_column(String, nullable=False)
     category: Mapped[str] = mapped_column(String, nullable=False)
     date: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         default=lambda: datetime.now(timezone.utc)
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_deleted: Mapped[bool] = mapped_column(default=False)             # soft delete
+    is_deleted: Mapped[bool] = mapped_column(default=False)
 
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

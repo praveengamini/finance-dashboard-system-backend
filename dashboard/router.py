@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.rbac import require_roles
@@ -13,37 +16,43 @@ from dashboard.service import (
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
-@router.get("/summary")
+@router.get("/summary", summary="Financial summary")
 async def summary(
+    date_from: Optional[datetime] = Query(None, description="ISO 8601 start date"),
+    date_to: Optional[datetime] = Query(None, description="ISO 8601 end date"),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_roles(["admin", "analyst", "viewer"])),
 ):
-    """Total income, expense, and net balance. All roles."""
-    return await get_summary(db)
+    """All roles. Total income, expense, net balance. Supports date range filter."""
+    return await get_summary(db, date_from, date_to)
 
 
-@router.get("/categories")
+@router.get("/categories", summary="Category breakdown")
 async def categories(
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_roles(["admin", "analyst"])),
 ):
-    """Breakdown of totals per category. Admin and Analyst only."""
-    return await get_category_breakdown(db)
+    """Admin and analyst. Per-category totals. Supports date range filter."""
+    return await get_category_breakdown(db, date_from, date_to)
 
 
-@router.get("/trends")
+@router.get("/trends", summary="Monthly trends")
 async def trends(
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_roles(["admin", "analyst"])),
 ):
-    """Monthly income/expense trends. Admin and Analyst only."""
-    return await get_monthly_trends(db)
+    """Admin and analyst. Monthly income/expense breakdown. Supports date range filter."""
+    return await get_monthly_trends(db, date_from, date_to)
 
 
-@router.get("/recent")
+@router.get("/recent", summary="Recent activity")
 async def recent(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_roles(["admin", "analyst", "viewer"])),
 ):
-    """Last 10 financial records. All roles."""
+    """All roles. Last 10 records."""
     return await get_recent_activity(db)

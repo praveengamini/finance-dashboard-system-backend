@@ -48,13 +48,6 @@ class RecordUpdate(BaseModel):
         return v
 
 
-class RecordFilter(BaseModel):
-    type: Optional[RecordType] = None
-    category: Optional[str] = None
-    date_from: Optional[datetime] = None
-    date_to: Optional[datetime] = None
-
-
 class RecordResponse(BaseModel):
     id: UUID
     user_id: str
@@ -65,5 +58,15 @@ class RecordResponse(BaseModel):
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RecordListResponse(BaseModel):
+    page: int
+    page_size: int
+    total_records: int
+    total_pages: int
+    results: list[RecordResponse]
 
     model_config = {"from_attributes": True}
