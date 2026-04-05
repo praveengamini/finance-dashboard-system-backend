@@ -13,8 +13,12 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await check_db()
-    await init_db()
+    try:
+        await check_db()
+        await init_db()
+        print("✅ Startup complete")
+    except Exception as e:
+        print(f"❌ Startup failed: {e}")
     yield
 
 
